@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}{{ test.title }} — ПутьHome{% endblock %}
+{% block page_title %}Тест{% endblock %}
+
+{% block content %}
+<div class="page" style="max-width:680px;">
+  <div class="card" style="padding:2rem;">
+    <h1 style="font-size:20px;font-weight:700;margin-bottom:0.5rem;">{{ test.title }}</h1>
+    <p class="text-secondary text-sm mb-6">Ответьте честно — результаты видны только вам. Нет правильных или неправильных ответов.</p>
+
+    {% if prev_result %}
+    <div class="alert alert-success mb-4">
+      Вы уже проходили этот тест. Результат: {{ (prev_result.score / prev_result.total * 100)|int }}%.
+      Вы можете пройти снова.
+    </div>
+    {% endif %}
+
+    <div id="testForm">
+      {% for q in test.questions %}
+      <div style="margin-bottom:2rem;" class="question" data-id="{{ q.id }}">
+        <div style="font-size:15px;font-weight:600;margin-bottom:12px;color:var(--text);">
+          {{ loop.index }}. {{ q.text }}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          {% for i, opt in enumerate(q.options) %}
+          <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:all .15s;" class="opt-label">
+            <input type="radio" name="q{{ q.id }}" value="{{ i }}" style="accent-color:var(--c-teal);">
+            <span style="font-size:14px;color:var(--text-secondary);">{{ opt }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+
+      <button onclick="submitTest()" class="btn btn-primary btn-full" style="font-size:15px;padding:12px;">
+        Завершить тест
+      </button>
+    </div>
+
+    <!-- Result (hidden) -->
+    <div id="testResult" style="display:none;text-align:center;padding:1rem 0;">
+      <div style="font-size:60px;margin-bottom:1rem;" id="resultEmoji">🎯</div>
+      <div style="font-size:28px;font-weight:700;color:var(--text);margin-bottom:0.5rem;" id="resultScore"></div>
+      <div class="text-secondary mb-4" id="resultText"></div>
+      <div style="max-width:300px;margin:0 auto 1.5rem;" >
+        <div class="progress-bar"><div class="progress-bar-inner" id="resultBar" style="height:12px;"></div></div>
+      </div>
+      <a href="/course" class="btn btn-primary">Продолжить курс</a>
+    </div>
+  </div>
+</div>
+
+<script>
+// Highlight selected options
+document.querySelectorAll('.opt-label').forEach(label => {
+  label.querySelector('input').addEventListener('change', () => {
+    const name = label.querySelector('input').name;
+    document.querySelectorAll(`[name="${name}"]`).forEach(inp => {
+      inp.closest('.opt-label').style.borderColor = 'var(--border)';
+      inp.closest('.opt-label').style.background = '';
+    });
+    if (label.querySelector('input').checked) {
+      label.style.borderColor = 'var(--c-teal)';
+      label.style.background = 'var(--c-teal-light)';
+    }
+  });
+});
+
+async function submitTest() {
+  const answers = {};
+  let allAnswered = true;
+  document.querySelectorAll('.question').forEach(q => {
+    const id = q.dataset.id;
+    const sel = q.querySelector('input:checked');
+    if (sel) { answers[id] = sel.value; }
+    else { allAnswered = false; q.style.background = '#fff8f0'; q.style.borderLeft = '3px solid var(--c-amber)'; }
+  });
+  if (!allAnswered) { showToast('Ответьте на все вопросы'); return; }
+
+  const res = await fetch('/api/submit-test', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({test_id: '{{ test_id }}', answers})
+  });
+  const data = await res.json();
+  if (data.ok) showResult(data);
+}
+
+function showResult(data) {
+  document.getElementById('testForm').style.display = 'none';
+  const r = document.getElementById('testResult');
+  r.style.display = 'block';
+  const pct = data.pct;
+  document.getElementById('resultScore').textContent = pct + '%';
+  document.getElementById('resultEmoji').textContent = pct >= 70 ? '🎯' : pct >= 40 ? '📊' : '💡';
+  document.getElementById('resultBar').style.width = pct + '%';
+  document.getElementById('resultBar').style.background = pct >= 70 ? 'var(--c-teal)' : pct >= 40 ? 'var(--c-blue)' : 'var(--c-amber)';
+  document.getElementById('resultText').textContent = pct >= 70
+    ? 'Отличный результат! Ваши знания и осознанность растут.'
+    : pct >= 40
+    ? 'Хороший старт. Продолжайте работать с материалами курса.'
+    : 'Важная диагностика пройдена. Курс поможет вам улучшить показатели.';
+}
+</script>
+{% endblock %}
+{% block extra_head %}
+<script>
+// Jinja doesn't have enumerate natively
+</script>
+{% endblock %}

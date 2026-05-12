@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block title %}Главная — ПутьHome{% endblock %}
+{% block page_title %}Главная{% endblock %}
+
+{% block content %}
+<div class="page">
+
+  <!-- Welcome -->
+  <div style="margin-bottom:1.75rem;">
+    <h1 style="font-size:22px;font-weight:700;color:var(--text);">
+      {% set hour = now().hour if now is defined else 12 %}
+      Добрый день, {{ session.user_name.split()[0] }}
+    </h1>
+    <p class="text-secondary text-sm">
+      {% if cur_week_data %}
+        Вы на неделе {{ current_week }} — <strong>{{ cur_week_data.title }}</strong>
+      {% else %}
+        Добро пожаловать на курс выздоровления
+      {% endif %}
+    </p>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-grid mb-6">
+    <div class="kpi">
+      <div class="kpi-label">Прогресс курса</div>
+      <div class="kpi-value">{{ pct }}%</div>
+      <div style="margin-top:8px;">
+        <div class="progress-bar"><div class="progress-bar-inner" style="width:{{ pct }}%;background:var(--c-teal);height:8px;"></div></div>
+      </div>
+      <div class="kpi-sub">{{ completed }} из {{ total_lessons }} уроков</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Текущая неделя</div>
+      <div class="kpi-value">{{ current_week }} / 12</div>
+      <div class="kpi-sub">
+        {% if current_week <= 4 %}Месяц 1 — Осознание
+        {% elif current_week <= 8 %}Месяц 2 — Инструменты
+        {% else %}Месяц 3 — Интеграция{% endif %}
+      </div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Дней трезвости</div>
+      <div class="kpi-value" id="sobrietyDays">—</div>
+      <div class="kpi-sub up">Продолжайте!</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Ваш пакет</div>
+      <div class="kpi-value" style="font-size:16px;margin-top:4px;">
+        <span class="pkg-pill pkg-{{ session.user_package or 'basic' }}">
+          {% if session.user_package == 'premium' %}★ {% endif %}
+          {% if session.user_package == 'basic' %}Базовый{% elif session.user_package == 'standard' %}Стандарт{% else %}Премиум{% endif %}
+        </span>
+      </div>
+      <div class="kpi-sub">
+        {% if session.user_package in ['standard','premium'] %}Группа + консультации
+        {% else %}Самостоятельный{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-2 mb-6">
+    <!-- Current week lessons -->
+    <div class="card">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <div class="card-title">Неделя {{ current_week }}</div>
+          {% if cur_week_data %}
+          <div class="card-sub">{{ cur_week_data.title }}</div>
+          {% endif %}
+        </div>
+        <a href="/course" class="btn btn-secondary btn-sm">Весь курс</a>
+      </div>
+      {% if cur_week_data %}
+      <div>
+        {% for lesson in cur_week_data.lessons %}
+        {% set is_done = progress.get(lesson.id, 0) %}
+        <div class="lesson-row">
+          <div class="lesson-icon {% if lesson.type == 'video' %}li-video{% elif lesson.type == 'test' %}li-test{% else %}li-journal{% endif %}">
+            {% if lesson.type == 'video' %}
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            {% elif lesson.type == 'test' %}
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+            {% else %}
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5"/></svg>
+            {% endif %}
+          </div>
+          <div class="lesson-info">
+            <div class="lesson-name">{{ lesson.title[:45] }}{% if lesson.title|length > 45 %}...{% endif %}</div>
+            <div class="lesson-meta">{{ lesson.duration }} мин · {{ 'Видео' if lesson.type == 'video' else 'Тест' if lesson.type == 'test' else 'Задание' }}</div>
+          </div>
+          <a href="/lesson/{{ lesson.id }}" class="lesson-check {% if is_done %}done{% endif %}">
+            {% if is_done %}✓{% endif %}
+          </a>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Right column -->
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      <!-- Upcoming sessions -->
+      {% if session.user_package in ['standard','premium'] %}
+      <div class="card">
+        <div class="card-title mb-3">Ближайшие занятия</div>
+        {% if upcoming_sessions %}
+        {% for s in upcoming_sessions %}
+        <div style="padding:10px 0;border-bottom:1px solid var(--border);" class="{% if loop.last %}{% endif %}">
+          <div class="text-sm font-semibold">{{ s.title }}</div>
+          <div class="text-xs text-muted">{{ s.scheduled_at[:16] }} · {{ s.duration_min }} мин</div>
+        </div>
+        {% endfor %}
+        <a href="/sessions" class="btn btn-secondary btn-sm mt-4" style="margin-top:12px;">Все занятия</a>
+        {% else %}
+        <p class="text-sm text-muted">Расписание формируется. Скоро появятся занятия.</p>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <!-- Journal quick add -->
+      <div class="card">
+        <div class="card-title mb-3">Как вы сегодня?</div>
+        <div class="mood-scale mb-3" id="moodScale">
+          <button class="mood-btn" data-mood="1" onclick="setMood(1)">😔</button>
+          <button class="mood-btn" data-mood="2" onclick="setMood(2)">😕</button>
+          <button class="mood-btn" data-mood="3" onclick="setMood(3)">😐</button>
+          <button class="mood-btn" data-mood="4" onclick="setMood(4)">🙂</button>
+          <button class="mood-btn" data-mood="5" onclick="setMood(5)">😊</button>
+        </div>
+        <a href="/journal" class="btn btn-secondary btn-sm btn-full">Открыть дневник</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent journal -->
+  {% if entries %}
+  <div class="card mb-6">
+    <div class="flex items-center justify-between mb-4">
+      <div class="card-title">Последние записи дневника</div>
+      <a href="/journal" class="btn btn-secondary btn-sm">Все записи</a>
+    </div>
+    {% for e in entries %}
+    <div style="padding:12px 0;border-bottom:1px solid var(--border);{% if loop.last %}border:none{% endif %}">
+      <div class="flex items-center gap-2 mb-1">
+        <span style="font-size:18px;">{{ ['😔','😕','😐','🙂','😊'][e.mood-1] if e.mood else '📝' }}</span>
+        <span class="text-xs text-muted">{{ e.created_at[:10] }}</span>
+        {% if e.week_num %}<span class="badge badge-teal" style="font-size:10px;">Неделя {{ e.week_num }}</span>{% endif %}
+      </div>
+      <p class="text-sm text-secondary" style="line-height:1.5;">{{ e.content[:120] }}{% if e.content|length > 120 %}...{% endif %}</p>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+</div>
+
+<script>
+// Sobriety counter from localStorage
+let startDate = localStorage.getItem('sobrietyStart');
+if (!startDate) {
+  startDate = new Date().toISOString().split('T')[0];
+  localStorage.setItem('sobrietyStart', startDate);
+}
+const days = Math.floor((new Date() - new Date(startDate)) / 86400000);
+document.getElementById('sobrietyDays').textContent = days + ' дн.';
+
+function setMood(val) {
+  document.querySelectorAll('.mood-btn').forEach(b => b.classList.toggle('selected', parseInt(b.dataset.mood) === val));
+}
+</script>
+{% endblock %}

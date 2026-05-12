@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Дневник — ПутьHome{% endblock %}
+{% block page_title %}Мой дневник{% endblock %}
+
+{% block content %}
+<div class="page">
+  <div class="grid-2" style="grid-template-columns:1fr 1.5fr;gap:24px;align-items:start;">
+
+    <!-- New entry -->
+    <div style="position:sticky;top:80px;">
+      <div class="card">
+        <div class="card-title mb-1">Новая запись</div>
+        <p class="text-xs text-muted mb-4">Только вы видите свои записи</p>
+        <form method="POST">
+          <div class="form-group">
+            <label class="form-label">Как вы себя чувствуете?</label>
+            <div class="mood-scale" id="moodScale">
+              {% for emoji, label, val in [('😔','Плохо',1),('😕','Так себе',2),('😐','Нейтрально',3),('🙂','Хорошо',4),('😊','Отлично',5)] %}
+              <button type="button" class="mood-btn" data-mood="{{ val }}" onclick="setMood({{ val }}, this)" title="{{ label }}">{{ emoji }}</button>
+              {% endfor %}
+            </div>
+            <input type="hidden" name="mood" id="moodInput" value="3">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Запись</label>
+            <textarea name="content" class="form-input" rows="8"
+              placeholder="Как прошёл день? Что вы почувствовали? Что помогло, что было сложным?"></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary btn-full">Сохранить запись</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Entries list -->
+    <div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+        <h2 style="font-size:16px;font-weight:600;">Мои записи ({{ entries|length }})</h2>
+      </div>
+      {% if entries %}
+      {% for e in entries %}
+      <div class="card mb-3">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <span style="font-size:24px;">{{ ['😔','😕','😐','🙂','😊'][e.mood-1] if e.mood else '📝' }}</span>
+          <div>
+            <div class="text-sm font-semibold">{{ e.created_at[:10] }}</div>
+            <div class="text-xs text-muted">{{ e.created_at[11:16] }}
+              {% if e.week_num %} · <span class="badge badge-teal" style="font-size:10px;padding:1px 6px;">Неделя {{ e.week_num }}</span>{% endif %}
+            </div>
+          </div>
+        </div>
+        <p style="color:var(--text-secondary);font-size:14px;line-height:1.7;white-space:pre-wrap;">{{ e.content }}</p>
+      </div>
+      {% endfor %}
+      {% else %}
+      <div class="card" style="text-align:center;padding:3rem 2rem;">
+        <div style="font-size:40px;margin-bottom:1rem;">📖</div>
+        <div class="card-title mb-2">Дневник пуст</div>
+        <p class="text-secondary text-sm">Начните с первой записи — опишите, как вы себя чувствуете прямо сейчас</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+function setMood(val, btn) {
+  document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  document.getElementById('moodInput').value = val;
+}
+// Pre-select middle mood
+document.querySelector('[data-mood="3"]')?.classList.add('selected');
+</script>
+{% endblock %}

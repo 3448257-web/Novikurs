@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Занятия — ПутьHome{% endblock %}
+{% block page_title %}Занятия и встречи{% endblock %}
+
+{% block content %}
+<div class="page">
+  {% if session.user_package == 'basic' %}
+  <div class="card" style="background:var(--c-amber-light);border-color:rgba(186,117,23,0.25);text-align:center;padding:2rem;">
+    <div style="font-size:40px;margin-bottom:1rem;">👥</div>
+    <div class="card-title mb-2">Групповые занятия недоступны</div>
+    <p class="text-secondary text-sm mb-4">Базовый пакет — только самостоятельное обучение. Обновитесь до Стандарт для доступа к групповым занятиям.</p>
+    <a href="/register" class="btn btn-primary">Обновить пакет</a>
+  </div>
+  {% else %}
+
+  <!-- Group sessions -->
+  <div style="margin-bottom:2rem;">
+    <h2 style="font-size:17px;font-weight:700;margin-bottom:1rem;">Групповые занятия</h2>
+    {% if group_sessions %}
+    <div class="grid-2">
+      {% for s in group_sessions %}
+      <div class="card">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;">
+          <div>
+            <div style="font-size:15px;font-weight:600;margin-bottom:4px;">{{ s.title }}</div>
+            <div class="text-xs text-muted">{{ s.scheduled_at[:16] }} · {{ s.duration_min }} мин</div>
+          </div>
+          <span class="badge {% if s.package == 'premium' %}badge-purple{% else %}badge-teal{% endif %}">
+            {{ s.package|capitalize }}
+          </span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0"/></svg>
+          <span class="text-sm text-secondary">{{ s.booked_count }} участников</span>
+        </div>
+        {% if s.is_booked %}
+        <div style="display:flex;gap:8px;">
+          <span class="badge badge-teal" style="padding:6px 12px;">✓ Записан(а)</span>
+          {% if s.meeting_url %}<a href="{{ s.meeting_url }}" target="_blank" class="btn btn-primary btn-sm">Войти в встречу</a>{% endif %}
+        </div>
+        {% else %}
+        <button onclick="bookSession({{ s.id }}, this)" class="btn btn-secondary btn-sm">Записаться</button>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="card" style="text-align:center;padding:2rem;">
+      <p class="text-secondary text-sm">Расписание групп формируется. Скоро появятся занятия.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Individual sessions -->
+  {% if session.user_package == 'premium' or ind_sessions %}
+  <div>
+    <h2 style="font-size:17px;font-weight:700;margin-bottom:1rem;">Индивидуальные консультации</h2>
+    {% if ind_sessions %}
+    {% for s in ind_sessions %}
+    <div class="card mb-3">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-sm font-semibold">Сессия с {{ s.psychologist_name }}</div>
+          <div class="text-xs text-muted">{{ s.scheduled_at[:16] }} · {{ s.duration_min }} мин</div>
+        </div>
+        <div>
+          <span class="badge {% if s.status == 'scheduled' %}badge-blue{% elif s.status == 'completed' %}badge-teal{% else %}badge-amber{% endif %}">
+            {{ 'Запланирована' if s.status == 'scheduled' else 'Завершена' if s.status == 'completed' else s.status }}
+          </span>
+          {% if s.meeting_url and s.status == 'scheduled' %}
+          <a href="{{ s.meeting_url }}" target="_blank" class="btn btn-primary btn-sm" style="margin-left:8px;">Войти</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="card" style="text-align:center;padding:2rem;">
+      <div style="font-size:36px;margin-bottom:1rem;">🗓️</div>
+      <div class="card-title mb-2">Записаться на консультацию</div>
+      <p class="text-secondary text-sm mb-4">Как пользователь пакета Премиум, вы можете записаться на индивидуальную сессию с психологом</p>
+      <button class="btn btn-primary" onclick="showToast('Функция записи скоро будет доступна')">Запросить консультацию</button>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% endif %}
+</div>
+
+<script>
+async function bookSession(id, btn) {
+  btn.disabled = true;
+  btn.textContent = 'Записываемся...';
+  await fetch('/api/book-session', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({session_id: id})
+  });
+  btn.textContent = '✓ Записан(а)';
+  btn.className = 'badge badge-teal';
+  btn.style.padding = '6px 12px';
+  showToast('Вы записаны на занятие!');
+}
+</script>
+{% endblock %}

@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Прогресс — ПутьHome{% endblock %}
+{% block page_title %}Мой прогресс{% endblock %}
+
+{% block content %}
+<div class="page">
+  <!-- Overall stats -->
+  {% set total = namespace(n=0, done=0) %}
+  {% for m in program.months %}{% for w in m.weeks %}{% for l in w.lessons %}
+  {% set total.n = total.n + 1 %}{% if prog.get(l.id) %}{% set total.done = total.done + 1 %}{% endif %}
+  {% endfor %}{% endfor %}{% endfor %}
+  {% set pct = (total.done / total.n * 100)|int if total.n else 0 %}
+
+  <div class="kpi-grid mb-6">
+    <div class="kpi">
+      <div class="kpi-label">Общий прогресс</div>
+      <div class="kpi-value">{{ pct }}%</div>
+      <div class="progress-bar" style="margin-top:8px;"><div class="progress-bar-inner" style="width:{{ pct }}%;background:var(--c-teal);height:8px;"></div></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Уроков пройдено</div>
+      <div class="kpi-value">{{ total.done }}</div>
+      <div class="kpi-sub">из {{ total.n }}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Текущая неделя</div>
+      <div class="kpi-value">{{ current_week }}</div>
+      <div class="kpi-sub">из 12</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Тестов пройдено</div>
+      <div class="kpi-value">{{ test_results|length }}</div>
+      <div class="kpi-sub up">результаты сохранены</div>
+    </div>
+  </div>
+
+  <div class="grid-2 mb-6">
+    <!-- Weekly chart -->
+    <div class="card">
+      <div class="card-title mb-1">Прогресс по неделям</div>
+      <div class="text-xs text-muted mb-3">Процент выполненных уроков</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        {% for ws in week_stats %}
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="text-xs text-muted" style="min-width:50px;">Нед. {{ ws.week }}</span>
+          <div class="progress-bar" style="flex:1;height:18px;position:relative;">
+            <div style="height:18px;border-radius:4px;transition:width 0.8s;
+              background:{% if ws.week <= current_week %}{% if ws.pct == 100 %}var(--c-teal){% else %}var(--c-blue){% endif %}{% else %}var(--border){% endif %};
+              width:{{ ws.pct }}%;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;">
+              {% if ws.pct > 20 %}<span style="font-size:10px;color:white;font-weight:600;">{{ ws.pct }}%</span>{% endif %}
+            </div>
+          </div>
+          <span class="text-xs text-muted" style="min-width:30px;">{{ ws.done }}/{{ ws.total }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Mood chart -->
+    <div class="card">
+      <div class="card-title mb-1">Настроение</div>
+      <div class="text-xs text-muted mb-3">Последние записи в дневнике</div>
+      {% if mood_data %}
+      <div style="display:flex;align-items:flex-end;gap:4px;height:100px;margin-bottom:8px;">
+        {% for e in mood_data[:20]|reverse %}
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
+          <div style="width:100%;border-radius:3px 3px 0 0;
+            background:{% if e.mood >= 4 %}var(--c-teal){% elif e.mood == 3 %}var(--c-blue){% else %}var(--c-amber){% endif %};
+            height:{{ e.mood * 18 }}px;min-width:8px;"
+            title="{{ e.created_at[:10] }}: {{ ['😔','😕','😐','🙂','😊'][e.mood-1] }}">
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      <div style="display:flex;justify-content:space-between;" class="text-xs text-muted">
+        <span>{{ mood_data[-1].created_at[:10] if mood_data }}</span>
+        <span>Сегодня</span>
+      </div>
+      {% else %}
+      <p class="text-sm text-muted" style="text-align:center;padding:2rem 0;">Начните вести дневник, чтобы отслеживать настроение</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Test results -->
+  {% if test_results %}
+  <div class="card">
+    <div class="card-title mb-4">Результаты тестов</div>
+    {% for tr in test_results %}
+    {% set pct_score = (tr.score / tr.total * 100)|int %}
+    <div style="padding:12px 0;border-bottom:1px solid var(--border);{% if loop.last %}border:none{% endif %}">
+      <div class="flex items-center justify-between mb-1">
+        <div class="text-sm font-semibold">{{ tr.test_id }}</div>
+        <span class="badge {% if pct_score >= 70 %}badge-teal{% elif pct_score >= 40 %}badge-blue{% else %}badge-amber{% endif %}">
+          {{ tr.score }}/{{ tr.total }} ({{ pct_score }}%)
+        </span>
+      </div>
+      <div class="progress-bar"><div class="progress-bar-inner" style="width:{{ pct_score }}%;background:{% if pct_score >= 70 %}var(--c-teal){% elif pct_score >= 40 %}var(--c-blue){% else %}var(--c-amber){% endif %};height:6px;"></div></div>
+      <div class="text-xs text-muted" style="margin-top:3px;">{{ tr.completed_at[:10] }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

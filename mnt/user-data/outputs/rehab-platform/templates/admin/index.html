@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Админ-панель — ПутьHome{% endblock %}
+{% block page_title %}Администрирование{% endblock %}
+
+{% block content %}
+<div class="page-wide">
+  <!-- Stats -->
+  <div class="kpi-grid mb-6">
+    <div class="kpi">
+      <div class="kpi-label">Всего студентов</div>
+      <div class="kpi-value">{{ total_users }}</div>
+      <div class="kpi-sub up">активных аккаунтов</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Кризисных сигналов</div>
+      <div class="kpi-value" style="color:var(--c-red);">{{ alerts|length }}</div>
+      <div class="kpi-sub" style="color:var(--c-red);">требуют внимания</div>
+    </div>
+    {% for row in enrollments_by_pkg %}
+    <div class="kpi">
+      <div class="kpi-label">Пакет {{ row.package|capitalize }}</div>
+      <div class="kpi-value">{{ row.n }}</div>
+      <div class="kpi-sub">активных подписок</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Crisis alerts -->
+  {% if alerts %}
+  <div class="card mb-6" style="border-color:rgba(226,75,74,0.3);">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:1rem;">
+      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="var(--c-red)"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+      <div class="card-title" style="color:var(--c-red);margin-bottom:0;">Кризисные сигналы</div>
+    </div>
+    {% for a in alerts %}
+    <div style="padding:12px;background:var(--c-red-light);border-radius:var(--radius-sm);margin-bottom:8px;">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-sm font-semibold">{{ a.name }}</div>
+          <div class="text-xs text-muted">{{ a.created_at[:16] }}</div>
+          {% if a.message %}<p class="text-sm" style="margin-top:4px;">{{ a.message }}</p>{% endif %}
+        </div>
+        <button onclick="resolveAlert({{ a.id }}, this)" class="btn btn-sm" style="background:var(--c-red);color:white;">Отметить решённым</button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Users table -->
+  <div class="card">
+    <div class="card-title mb-4">Пользователи ({{ users|length }})</div>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:14px;">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border);">
+            <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-size:12px;font-weight:600;">ИМЯ</th>
+            <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-size:12px;font-weight:600;">EMAIL</th>
+            <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-size:12px;font-weight:600;">РОЛЬ</th>
+            <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-size:12px;font-weight:600;">ПАКЕТ</th>
+            <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-size:12px;font-weight:600;">ДАТА</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:10px 12px;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div class="avatar" style="width:28px;height:28px;font-size:11px;">{{ u.avatar_initials or u.name[:2]|upper }}</div>
+                {{ u.name }}
+              </div>
+            </td>
+            <td style="padding:10px 12px;color:var(--text-secondary);">{{ u.email }}</td>
+            <td style="padding:10px 12px;">
+              <span class="badge {% if u.role == 'admin' %}badge-red{% elif u.role == 'psychologist' %}badge-purple{% else %}badge-teal{% endif %}">
+                {{ u.role }}
+              </span>
+            </td>
+            <td style="padding:10px 12px;">
+              {% if u.package %}
+              <span class="badge pkg-{{ u.package }}">{{ u.package }}</span>
+              {% else %}<span class="text-muted">—</span>{% endif %}
+            </td>
+            <td style="padding:10px 12px;color:var(--text-muted);font-size:12px;">{{ u.created_at[:10] }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+async function resolveAlert(id, btn) {
+  // In production, add API endpoint
+  btn.textContent = '✓ Решено';
+  btn.disabled = true;
+  showToast('Статус обновлён');
+}
+</script>
+{% endblock %}

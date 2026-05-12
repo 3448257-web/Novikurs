@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% block title %}{{ lesson.title }} — ПутьHome{% endblock %}
+{% block page_title %}{{ month.title }} · Неделя {{ week.num }}{% endblock %}
+
+{% block content %}
+<div class="page">
+  <!-- Breadcrumb -->
+  <div style="display:flex;align-items:center;gap:6px;margin-bottom:1.25rem;font-size:13px;color:var(--text-muted);">
+    <a href="/course" style="color:var(--c-teal);">Курс</a>
+    <span>›</span>
+    <span>Неделя {{ week.num }}</span>
+    <span>›</span>
+    <span style="color:var(--text);">{{ lesson.title[:40] }}{% if lesson.title|length > 40 %}...{% endif %}</span>
+  </div>
+
+  <div class="grid-2" style="grid-template-columns:2fr 1fr;gap:24px;">
+    <!-- Main content -->
+    <div>
+      <!-- Video -->
+      {% if lesson.type == 'video' %}
+      <div class="video-wrap mb-4">
+        {% if lesson.url %}
+        <iframe src="{{ lesson.url }}" allowfullscreen title="{{ lesson.title }}"></iframe>
+        {% else %}
+        <div class="video-placeholder">
+          <div class="play-btn">
+            <svg width="28" height="28" fill="white" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          </div>
+          <p style="font-size:14px;opacity:0.7;">Видеолекция будет добавлена</p>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <!-- Test -->
+      {% if lesson.type == 'test' %}
+      <div class="card mb-4" style="background:var(--c-amber-light);border-color:rgba(186,117,23,0.2);">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <div style="width:36px;height:36px;background:var(--c-amber);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;">
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+          </div>
+          <div>
+            <div style="font-weight:600;color:var(--c-amber);">Тест</div>
+            <div class="text-xs text-muted">{{ lesson.duration }} минут · Анонимно</div>
+          </div>
+        </div>
+        <a href="/test/{{ lesson.id }}" class="btn btn-full" style="background:var(--c-amber);color:white;justify-content:center;">Пройти тест</a>
+      </div>
+      {% endif %}
+
+      <!-- Journal -->
+      {% if lesson.type == 'journal' %}
+      <div class="card mb-4" style="background:var(--c-teal-light);border-color:rgba(29,158,117,0.2);">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+          <div style="width:36px;height:36px;background:var(--c-teal);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;">
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+          </div>
+          <div>
+            <div style="font-weight:600;color:var(--c-teal);">Дневниковая практика</div>
+            <div class="text-xs text-muted">{{ lesson.duration }} минут · Только для вас</div>
+          </div>
+        </div>
+        <textarea id="journalText" class="form-input" rows="6"
+          placeholder="{{ lesson.description }}" style="background:white;margin-bottom:10px;"></textarea>
+        <button class="btn btn-primary btn-full" onclick="saveJournal()">Сохранить запись</button>
+      </div>
+      {% endif %}
+
+      <!-- Description -->
+      <div class="card mb-4">
+        <div class="card-title mb-2">О занятии</div>
+        <p class="text-secondary" style="line-height:1.7;">{{ lesson.description }}</p>
+        {% if lesson.duration %}
+        <div style="margin-top:12px;display:flex;align-items:center;gap:12px;">
+          <span class="badge badge-teal">{{ lesson.duration }} минут</span>
+          <span class="badge badge-blue">Неделя {{ week.num }}</span>
+          <span class="badge" style="background:var(--bg);color:var(--text-secondary);">
+            {{ 'Видеолекция' if lesson.type == 'video' else 'Тест' if lesson.type == 'test' else 'Практика' }}
+          </span>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Complete & Next -->
+      <div style="display:flex;gap:12px;align-items:center;">
+        <button id="completeBtn" onclick="markComplete()" class="btn btn-primary" style="{% if progress.get(lesson.id) %}background:var(--c-teal);{% endif %}">
+          {% if progress.get(lesson.id) %}
+          ✓ Завершено
+          {% else %}
+          Отметить как выполненное
+          {% endif %}
+        </button>
+        {% if next_lesson_id %}
+        <a href="/lesson/{{ next_lesson_id }}" class="btn btn-secondary">Следующий урок →</a>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      <!-- Week progress -->
+      <div class="card">
+        <div class="card-title mb-3">Неделя {{ week.num }}: {{ week.title }}</div>
+        {% for l in week.lessons %}
+        {% set is_done = progress.get(l.id, 0) %}
+        <a href="/lesson/{{ l.id }}" style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);{% if loop.last %}border:none{% endif %}{% if l.id == lesson.id %};background:none{% endif %}">
+          <div class="lesson-check {% if is_done %}done{% endif %}" style="width:18px;height:18px;font-size:10px;">{% if is_done %}✓{% endif %}</div>
+          <span class="text-xs {% if l.id == lesson.id %}font-semibold{% else %}text-secondary{% endif %}" style="{% if l.id == lesson.id %}color:var(--c-teal);{% endif %}">
+            {{ l.title[:35] }}{% if l.title|length > 35 %}...{% endif %}
+          </span>
+        </a>
+        {% endfor %}
+      </div>
+
+      <!-- Notes -->
+      <div class="card">
+        <div class="card-title mb-2">Заметки к уроку</div>
+        <textarea id="lessonNotes" class="form-input" rows="5"
+          placeholder="Записывайте инсайты и мысли..."
+          onchange="saveNotes('{{ lesson.id }}', this.value)"></textarea>
+        <div class="text-xs text-muted" style="margin-top:4px;">Сохраняется автоматически</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Load saved notes
+const savedNote = localStorage.getItem('note_{{ lesson.id }}');
+if (savedNote) document.getElementById('lessonNotes').value = savedNote;
+
+function saveNotes(id, val) {
+  localStorage.setItem('note_' + id, val);
+}
+
+async function markComplete() {
+  const btn = document.getElementById('completeBtn');
+  btn.disabled = true;
+  const result = await completeLesson('{{ lesson.id }}', {{ week.num }});
+  if (result.ok) {
+    btn.textContent = '✓ Завершено';
+    btn.style.background = 'var(--c-teal)';
+    showToast('Урок отмечен как выполненный! 🎉');
+    // Update sidebar checkmark
+    setTimeout(() => {
+      {% if next_lesson_id %}
+      if (confirm('Перейти к следующему уроку?')) {
+        window.location.href = '/lesson/{{ next_lesson_id }}';
+      }
+      {% endif %}
+    }, 1200);
+  }
+  btn.disabled = false;
+}
+
+async function saveJournal() {
+  const text = document.getElementById('journalText')?.value;
+  if (!text?.trim()) { showToast('Напишите что-нибудь в дневнике'); return; }
+  const res = await fetch('/journal', {
+    method: 'POST',
+    headers: {'Content-Type':'application/x-www-form-urlencoded'},
+    body: `content=${encodeURIComponent(text)}&mood=3`
+  });
+  showToast('Запись сохранена ✓');
+  await markComplete();
+}
+</script>
+{% endblock %}

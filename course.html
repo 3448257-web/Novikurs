@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Курс — ПутьHome{% endblock %}
+{% block page_title %}Программа курса{% endblock %}
+
+{% block content %}
+<div class="page">
+  <div class="flex items-center justify-between mb-6">
+    <p class="text-secondary text-sm">12 недель · 3 месяца · 36 видеолекций · 24 теста</p>
+    <span class="badge badge-teal">Неделя {{ current_week }} из 12</span>
+  </div>
+
+  <!-- Month tabs -->
+  <div style="display:flex;gap:8px;margin-bottom:1.5rem;flex-wrap:wrap;" id="monthTabs">
+    {% for month in program.months %}
+    <button onclick="filterMonth({{ month.num }})"
+      id="tab{{ month.num }}"
+      style="padding:7px 16px;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--border-md);background:{% if month.num == 1 %}{{ month.color }}{% else %}var(--bg-white){% endif %};color:{% if month.num == 1 %}white{% else %}var(--text-secondary){% endif %};transition:all .2s;">
+      М{{ month.num }}: {{ month.title }}
+    </button>
+    {% endfor %}
+    <button onclick="filterMonth(0)" id="tab0"
+      style="padding:7px 16px;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--border-md);background:var(--bg-white);color:var(--text-secondary);">
+      Все
+    </button>
+  </div>
+
+  {% for month in program.months %}
+  <div class="month-section" data-month="{{ month.num }}" style="margin-bottom:2rem;">
+    <!-- Month header -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem;">
+      <div style="width:36px;height:36px;border-radius:50%;background:{{ month.color }};display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:14px;flex-shrink:0;">М{{ month.num }}</div>
+      <div>
+        <div style="font-size:17px;font-weight:700;color:var(--text);">{{ month.title }}</div>
+        <div class="text-sm text-muted">{{ month.subtitle }}</div>
+      </div>
+      {% set month_total = namespace(n=0, done=0) %}
+      {% for w in month.weeks %}{% for l in w.lessons %}{% set month_total.n = month_total.n + 1 %}{% if progress.get(l.id) %}{% set month_total.done = month_total.done + 1 %}{% endif %}{% endfor %}{% endfor %}
+      <div class="badge badge-teal" style="margin-left:auto;">{{ month_total.done }}/{{ month_total.n }}</div>
+    </div>
+
+    {% for week in month.weeks %}
+    {% set week_total = namespace(done=0) %}
+    {% for l in week.lessons %}{% if progress.get(l.id) %}{% set week_total.done = week_total.done + 1 %}{% endif %}{% endfor %}
+    {% set is_current = week.num == current_week %}
+    {% set is_locked = week.num > current_week %}
+
+    <div class="week-card {% if is_current %}current-week{% endif %}"
+      style="{% if is_current %}border-color:{{ month.color }};border-width:2px;{% endif %}{% if is_locked %}opacity:0.7;{% endif %}">
+      <div class="week-header" onclick="toggleWeek('week{{ week.num }}')">
+        <div class="week-num" style="background:{{ month.color }};">{{ week.num }}</div>
+        <div style="flex:1;">
+          <div style="font-size:14px;font-weight:600;color:var(--text);">{{ week.title }}
+            {% if is_current %}<span class="badge badge-teal" style="margin-left:8px;font-size:10px;">Текущая</span>{% endif %}
+            {% if is_locked %}<span style="margin-left:8px;font-size:11px;color:var(--text-muted);">🔒</span>{% endif %}
+          </div>
+          <div class="text-xs text-muted">{{ week.lessons|length }} урока · Неделя {{ week.num }}</div>
+        </div>
+        <div style="min-width:80px;margin-right:12px;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div class="progress-bar" style="flex:1;"><div class="progress-bar-inner" style="width:{{ (week_total.done / week.lessons|length * 100)|int }}%;background:{{ month.color }};height:6px;"></div></div>
+            <span class="text-xs text-muted">{{ week_total.done }}/{{ week.lessons|length }}</span>
+          </div>
+        </div>
+        <svg id="chevron-week{{ week.num }}" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="transition:transform .2s;{% if is_current %}transform:rotate(180deg);{% endif %}"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+
+      <div class="week-body" id="week{{ week.num }}" style="{% if not is_current %}display:none;{% endif %}">
+        {% for lesson in week.lessons %}
+        {% set is_done = progress.get(lesson.id, 0) %}
+        <div class="lesson-row {% if is_locked %}{% endif %}">
+          <div class="lesson-icon {% if lesson.type == 'video' %}li-video{% elif lesson.type == 'test' %}li-test{% else %}li-journal{% endif %}">
+            {% if lesson.type == 'video' %}
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            {% elif lesson.type == 'test' %}
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+            {% else %}
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+            {% endif %}
+          </div>
+          <div class="lesson-info">
+            <div class="lesson-name">{{ lesson.title }}</div>
+            <div class="lesson-meta">{{ lesson.duration }} мин
+              {% if lesson.type == 'video' %}· Видеолекция{% elif lesson.type == 'test' %}· Тест{% else %}· Практика{% endif %}
+            </div>
+          </div>
+          {% if not is_locked %}
+          <a href="/lesson/{{ lesson.id }}" style="display:flex;align-items:center;gap:4px;" class="btn btn-secondary btn-sm">
+            {{ 'Повторить' if is_done else 'Начать' }}
+          </a>
+          {% endif %}
+          <div class="lesson-check {% if is_done %}done{% endif %}">{% if is_done %}✓{% endif %}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
+
+<script>
+function toggleWeek(id) {
+  const el = document.getElementById(id);
+  const chevron = document.getElementById('chevron-' + id);
+  const open = el.style.display !== 'none';
+  el.style.display = open ? 'none' : 'block';
+  chevron.style.transform = open ? '' : 'rotate(180deg)';
+}
+
+const monthColors = { 1: '#378ADD', 2: '#1D9E75', 3: '#7F77DD' };
+
+function filterMonth(num) {
+  document.querySelectorAll('.month-section').forEach(s => {
+    s.style.display = (num === 0 || parseInt(s.dataset.month) === num) ? 'block' : 'none';
+  });
+  [0,1,2,3].forEach(n => {
+    const tab = document.getElementById('tab' + n);
+    if (!tab) return;
+    if (n === num) {
+      tab.style.background = n === 0 ? 'var(--text)' : monthColors[n];
+      tab.style.color = 'white';
+      tab.style.borderColor = 'transparent';
+    } else {
+      tab.style.background = 'var(--bg-white)';
+      tab.style.color = 'var(--text-secondary)';
+      tab.style.borderColor = 'var(--border-md)';
+    }
+  });
+}
+</script>
+{% endblock %}

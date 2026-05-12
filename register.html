@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block body %}
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f0faf5 0%,#e8f4fd 100%);padding:1rem;">
+  <div style="width:100%;max-width:520px;">
+
+    <div style="text-align:center;margin-bottom:2rem;">
+      <div style="font-family:'Playfair Display',serif;font-size:32px;color:var(--c-teal);margin-bottom:4px;">ПутьHome</div>
+      <p style="color:var(--text-muted);font-size:14px;">Начните путь к трезвости сегодня</p>
+    </div>
+
+    <div class="card" style="padding:2rem;">
+      <h1 style="font-size:20px;font-weight:700;margin-bottom:0.25rem;">Создать аккаунт</h1>
+      <p class="text-secondary text-sm" style="margin-bottom:1.5rem;">Анонимно и конфиденциально</p>
+
+      {% if error %}
+      <div class="alert alert-danger">{{ error }}</div>
+      {% endif %}
+
+      <form method="POST">
+        <div class="form-group">
+          <label class="form-label">Ваше имя</label>
+          <input type="text" name="name" class="form-input" placeholder="Как вас называть?" required>
+          <div class="form-hint">Можно использовать псевдоним</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" name="email" class="form-input" placeholder="you@example.com" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Пароль</label>
+          <input type="password" name="password" class="form-input" placeholder="Минимум 8 символов" minlength="8" required>
+        </div>
+
+        <!-- Package selection -->
+        <div class="form-group">
+          <label class="form-label">Выберите пакет</label>
+          <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px;" id="pkgSelect">
+            {% for key, pkg in packages.items() %}
+            <label style="display:flex;align-items:center;gap:12px;padding:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:border .15s;" class="pkg-option" data-pkg="{{ key }}">
+              <input type="radio" name="package" value="{{ key }}" {% if key == 'basic' %}checked{% endif %} style="accent-color:{{ pkg.color }};">
+              <div style="flex:1;">
+                <div style="font-weight:600;font-size:14px;color:{{ pkg.color }};">{{ pkg.name }}</div>
+                <div class="text-xs text-secondary">{{ pkg.features[0] }}, {{ pkg.features[1] }}{% if pkg.features|length > 2 %}, ...{% endif %}</div>
+              </div>
+              <div style="font-size:15px;font-weight:700;color:var(--text);">{{ pkg.price|int // 1 }} ₽/мес</div>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-full" style="margin-top:0.5rem;">Начать курс</button>
+      </form>
+
+      <div class="divider"></div>
+      <p class="text-sm text-secondary" style="text-align:center;">
+        Уже есть аккаунт? <a href="/login" style="color:var(--c-teal);font-weight:500;">Войти</a>
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+// Highlight selected package
+document.querySelectorAll('.pkg-option input').forEach(inp => {
+  const updateHighlight = () => {
+    document.querySelectorAll('.pkg-option').forEach(l => l.style.borderColor = 'var(--border)');
+    if (inp.checked) {
+      inp.closest('.pkg-option').style.borderColor = inp.closest('.pkg-option').dataset.pkg === 'basic' ? '#378ADD' : inp.closest('.pkg-option').dataset.pkg === 'standard' ? '#1D9E75' : '#7F77DD';
+      inp.closest('.pkg-option').style.background = inp.closest('.pkg-option').dataset.pkg === 'basic' ? '#EAF4FF' : inp.closest('.pkg-option').dataset.pkg === 'standard' ? '#E1F5EE' : '#EEEDFE';
+    }
+  };
+  inp.addEventListener('change', () => {
+    document.querySelectorAll('.pkg-option').forEach(l => { l.style.borderColor='var(--border)'; l.style.background=''; });
+    updateHighlight();
+  });
+  if (inp.checked) updateHighlight();
+});
+</script>
+{% endblock %}
